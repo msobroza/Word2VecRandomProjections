@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author msobroza
  */
+
 public class Word2VecParserRandom {
 
     public static final Logger log = LoggerFactory.getLogger(Word2VecParserRandom.class);
