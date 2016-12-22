@@ -5,19 +5,16 @@
  */
 package Word2VecParser;
 
-import CliqueNetwork.CliqueNet;
-import Model.Embedding.Embedding;
 import Model.Embedding.EmbeddingDouble;
+import RandomProjectionNetwork.RPDenseLayer;
+import RandomProjectionNetwork.RPInputWordLayer;
+import RandomProjectionNetwork.RPWordNetwork;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
-import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,38 +28,26 @@ public class Word2VecParserRandom {
     public static int FANALS_PER_CLUSTER = 128;
     public static int NUM_CLUSTERS = 32;
     public static final int EMBEDDINGS_DIMENSIONS = 300;
-    public static final String OUTPUT_FILE= "./code1_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String INPUT_FILE = "./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String OUTPUT_FILE = "./code1_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final boolean DIFFERENTIAL_LAYER = false;
 
     public static void main(String[] args) throws IOException, Exception {
-        WordVectors vec = WordVectorSerializer.loadTxtVectors(new File("./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt"));
-        int numWords = vec.vocab().numWords();
-        Word2VecParser.log.info("Num of words: " + numWords);
-        HashMap<String, Integer> vectorMap = new HashMap<>();
-        ArrayList<EmbeddingDouble> vectorsBinary = new ArrayList<>();
-        for (int i = 0; i < numWords; i++) {
-            String word = vec.vocab().wordAtIndex(i);
-            vectorMap.put(word, i);
-        }
         Word2VecParserRandom.log.info("Random weights matrix Claude idea");
-        CliqueNet net = new CliqueNet();
-        net.createRandomMatrixInitialization(EMBEDDINGS_DIMENSIONS, FANALS_PER_CLUSTER, NUM_CLUSTERS, (float) -1.0, (float) 1.0);
-        int j=0;
-        INDArray v;
-        int[] indexVec;
-        for (int i=0; i< numWords; i++) {
-            String word= vec.vocab().wordAtIndex(i);
-            indexVec = net.getCliqueFromRandomMultiplicationMatrix(word, vec.getWordVectorMatrix(word));
-            v = Nd4j.zeros(FANALS_PER_CLUSTER * NUM_CLUSTERS);
-            for (int iCluster = 0; iCluster < NUM_CLUSTERS; iCluster++) {
-                v.putScalar(iCluster * FANALS_PER_CLUSTER + indexVec[iCluster], 1.0);
-            }
-            vectorsBinary.add(new EmbeddingDouble(vec.vocab().wordAtIndex(i), v));
-            if(j%10000==0){
-                Word2VecParserRandom.log.info("j= "+j);
+        RPWordNetwork net = new RPWordNetwork(INPUT_FILE, EMBEDDINGS_DIMENSIONS);
+        RPInputWordLayer inputLayer = net.getInputLayer();
+        net.addLayer(new RPDenseLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, (float) -1.0, (float) 1.0));
+        int j = 0;
+        ArrayList<EmbeddingDouble> vectorsBinary = new ArrayList<>();
+        for (int i = 0; i < inputLayer.getNumberWords(); i++) {
+            String word = inputLayer.getWord(i);
+            vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutput(word)));
+            if (j % 10000 == 0) {
+                Word2VecParserRandom.log.info("j= " + j);
             }
             j++;
         }
-        writeWordVectors(vectorsBinary,OUTPUT_FILE);
+        writeWordVectors(vectorsBinary, OUTPUT_FILE);
     }
 
     public static void writeWordVectors(ArrayList<EmbeddingDouble> wordVectors, String path) throws IOException {

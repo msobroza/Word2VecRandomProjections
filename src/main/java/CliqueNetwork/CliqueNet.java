@@ -45,8 +45,6 @@ import static Word2VecParser.Word2VecParser.NUMBER_DISTRIBUTIONS;
 import static Word2VecParser.Word2VecParser.N_HADAMARD;
 import java.util.BitSet;
 import java.util.List;
-import org.deeplearning4j.nn.weights.WeightInitUtil;
-import org.nd4j.linalg.factory.Nd4j;
 
 /**
  *
@@ -81,34 +79,9 @@ public class CliqueNet {
     private ArrayList<ClusterClique> clusters;
     private HashMap<Fanal, ClusterClique> mapFanalCluster;
     private ArrayList<Embedding> anchors;
-    private INDArray W;
-    private int fanalsPerCluster;
-    private int numClusters;
 
     public CliqueNet() {
         this.anchors = new ArrayList<>();
-        this.W = null;
-        this.numClusters=0;
-        this.fanalsPerCluster=0;
-    }
-
-    public void createRandomMatrixInitialization(int dimensionEmbedding, int fanalsPerCluster, int numClusters, float min, float max) {
-        int[] dim = {dimensionEmbedding, fanalsPerCluster*numClusters};
-        this.W = WeightInitUtil.initWeights(dim, min, max);
-        this.numClusters=numClusters;
-        this.fanalsPerCluster=fanalsPerCluster;
-    }
-    
-    public int[] getCliqueFromRandomMultiplicationMatrix(String word, INDArray vec){
-        INDArray activations = vec.mmul(this.W);
-        int result [] = new int[numClusters];
-        INDArray indexWinners;
-        INDArray clusterActivations=activations.reshape(1, numClusters, fanalsPerCluster);
-        indexWinners = Nd4j.argMax(clusterActivations, 2);
-        for(int iCluster=0; iCluster<numClusters;iCluster++){
-            result[iCluster]= indexWinners.getInt(iCluster);
-        }
-        return result;
     }
 
     public void createRandomAnchorPoints(ArrayList<EmbeddingDouble> embVector) {
