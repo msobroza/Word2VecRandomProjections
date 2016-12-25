@@ -16,11 +16,10 @@ import org.nd4j.linalg.factory.Nd4j;
 public class RPDifferentialLayer extends RPDenseLayer {
 
     private final ShortTermMemory stm;
-    
 
     public RPDifferentialLayer(int inputDimension, int numClusters, int fanalsPerCluster, float min, float max) {
         super(inputDimension, numClusters, fanalsPerCluster, min, max);
-        this.stm=null;
+        this.stm = null;
     }
 
     public RPDifferentialLayer(int inputDimension, int numClusters, int fanalsPerCluster, int numWords, float min, float max) {
@@ -28,41 +27,46 @@ public class RPDifferentialLayer extends RPDenseLayer {
         this.stm = new ShortTermMemory(numWords, numClusters, fanalsPerCluster);
     }
 
-    public INDArray getVectorDifferentialWTA(INDArray activations, Double threshold, int idPattern) {
-        INDArray clusterActivations = activations.reshape(1, numClusters, fanalsPerCluster);
+    public INDArray getVectorShortTermMemory(int idPattern, Double thresholdSTM) {
+        return this.getVectorFromIndexes(this.stm.selectWTAIndexesPattern(idPattern, thresholdSTM));
+    }
+    
+    public INDArray getVectorShortTermMemory(int idPattern){
+        return this.getVectorFromIndexes(this.stm.selectWTAIndexesPattern(idPattern));
+    }
+
+    // one shot learning
+    public void memorizeSampleGlobalWTA(INDArray activationsSample, Double thresholdDifferential, int idPattern) {
+        INDArray clusterActivations = activationsSample.reshape(1, numClusters, fanalsPerCluster);
         INDArray indexWinners = Nd4j.argMax(clusterActivations, 2);
         INDArray diff = Nd4j.max(clusterActivations, 2).sub(Nd4j.min(clusterActivations, 2));
-        INDArray result = Nd4j.zeros(fanalsPerCluster * numClusters);
-        ArrayList<Integer> globalIndexesClique= new ArrayList<>();
+        ArrayList<Integer> globalIndexesClique = new ArrayList<>();
         for (int iCluster = 0; iCluster < numClusters; iCluster++) {
-            if (diff.getDouble(iCluster) > threshold) {
+            if (diff.getDouble(iCluster) > thresholdDifferential) {
                 int idFanal = iCluster * fanalsPerCluster + indexWinners.getInt(iCluster);
-                result.putScalar(idFanal, 1.0);
                 globalIndexesClique.add(idFanal);
             }
         }
         this.stm.memActivationsGlobalIndex(idPattern, globalIndexesClique);
-        return result;
     }
 
-    public INDArray getVectorDifferentialWTA(INDArray activations, int idPattern) {
-        int[] cliqueIndexes = getCliqueIndexesWTA(activations);
+    public void memorizeSampleLocalWTA(INDArray activationsSample, int idPattern) {
+        int[] cliqueIndexes = getCliqueIndexesWTA(activationsSample);
         this.stm.memActivationsLocalIndex(idPattern, cliqueIndexes);
-        return getVectorFromCliques(cliqueIndexes);
     }
 
     public INDArray getVectorDifferentialWTA(INDArray activations, Double threshold) {
         INDArray clusterActivations = activations.reshape(1, numClusters, fanalsPerCluster);
         INDArray indexWinners = Nd4j.argMax(clusterActivations, 2);
         INDArray diff = Nd4j.max(clusterActivations, 2).sub(Nd4j.min(clusterActivations, 2));
-        INDArray result = Nd4j.zeros(fanalsPerCluster * numClusters);
+        ArrayList<Integer> resultIndexes = new ArrayList<>();
         for (int iCluster = 0; iCluster < numClusters; iCluster++) {
             if (diff.getDouble(iCluster) > threshold) {
                 int idFanal = iCluster * fanalsPerCluster + indexWinners.getInt(iCluster);
-                result.putScalar(idFanal, 1.0);
+                resultIndexes.add(idFanal);
             }
         }
-        return result;
+        return this.getVectorFromIndexes(resultIndexes);
     }
 
     public INDArray getVectorDifferentialWTA(INDArray activations) {

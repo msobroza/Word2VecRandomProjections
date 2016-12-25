@@ -7,8 +7,10 @@ package Word2VecParser;
 
 import Model.Embedding.EmbeddingDouble;
 import RandomProjectionNetwork.RPDenseLayer;
+import RandomProjectionNetwork.RPDifferentialLayer;
 import RandomProjectionNetwork.RPInputWordLayer;
 import RandomProjectionNetwork.RPWordNetwork;
+import Tools.SynonymDict;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -22,27 +24,44 @@ import org.slf4j.LoggerFactory;
  *
  * @author msobroza
  */
-
 public class Word2VecParserRandom {
 
     public static final Logger log = LoggerFactory.getLogger(Word2VecParserRandom.class);
     public static int FANALS_PER_CLUSTER = 128;
     public static int NUM_CLUSTERS = 32;
     public static final int EMBEDDINGS_DIMENSIONS = 300;
-    public static final String INPUT_FILE = "./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String INPUT_EMBEDDINGS = "./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
     public static final String OUTPUT_FILE = "./code1_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String INPUT_SYNONYM = "./Synonyms/";
+    public static final boolean STM_ENABLE = false;
+    public static final int NUMBER_SAMPLES_PER_PATTERN = 5;
+    public static final Double THRESHOLD_STM = 0.1;
     public static final boolean DIFFERENTIAL_LAYER = false;
 
     public static void main(String[] args) throws IOException, Exception {
         Word2VecParserRandom.log.info("Random weights matrix Claude idea");
-        RPWordNetwork net = new RPWordNetwork(INPUT_FILE, EMBEDDINGS_DIMENSIONS);
-        RPInputWordLayer inputLayer = net.getInputLayer();
-        net.addLayer(new RPDenseLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, (float) -1.0, (float) 1.0));
+        RPWordNetwork net;
+        if (STM_ENABLE) {
+            net = new RPWordNetwork(INPUT_EMBEDDINGS, INPUT_SYNONYM, EMBEDDINGS_DIMENSIONS, NUMBER_SAMPLES_PER_PATTERN);
+        } else {
+            net = new RPWordNetwork(INPUT_EMBEDDINGS, EMBEDDINGS_DIMENSIONS);
+        }
+        if (DIFFERENTIAL_LAYER) {
+            net.addLayer(new RPDifferentialLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, net.getInputLayer().getNumberWords(), (float) -1.0, (float) 1.0));
+        } else {
+            net.addLayer(new RPDenseLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, (float) -1.0, (float) 1.0));
+        }
+
         int j = 0;
+        RPInputWordLayer inputLayer = net.getInputLayer();
         ArrayList<EmbeddingDouble> vectorsBinary = new ArrayList<>();
         for (int i = 0; i < inputLayer.getNumberWords(); i++) {
             String word = inputLayer.getWord(i);
-            vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutput(word)));
+            if (DIFFERENTIAL_LAYER && STM_ENABLE) {
+                vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutputSTM(word, THRESHOLD_STM)));
+            } else {
+                vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutput(word)));
+            }
             if (j % 10000 == 0) {
                 Word2VecParserRandom.log.info("j= " + j);
             }
@@ -73,7 +92,6 @@ public class Word2VecParserRandom {
             write.write(sb.toString());
 
         }
-
         write.flush();
         write.close();
 

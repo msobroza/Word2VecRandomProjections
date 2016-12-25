@@ -8,6 +8,7 @@ package RandomProjectionNetwork;
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 /**
@@ -21,6 +22,12 @@ public class RPWordNetwork {
 
     public RPWordNetwork(String fileInput, int embeddingsDimension) throws FileNotFoundException, UnsupportedEncodingException {
         this.inputLayer = new RPInputWordLayer(fileInput, embeddingsDimension);
+        this.layers = new ArrayList<>();
+    }
+
+    public RPWordNetwork(String fileNameEmbedding, String fileNameSyn, int wordEmbeddingsDimension, int minimumSamplesPerPattern) throws FileNotFoundException, UnsupportedEncodingException {
+        this.inputLayer = new RPInputWordSynLayer(fileNameEmbedding, fileNameSyn, wordEmbeddingsDimension, minimumSamplesPerPattern);
+        this.layers = new ArrayList<>();
     }
 
     public INDArray getCliqueOutput(String word) {
@@ -33,8 +40,36 @@ public class RPWordNetwork {
             } else {
                 inputVector = l.getVectorFromCliques(l.getCliqueIndexesWTA(inputVector));
             }
+            numLayers++;
         }
         return inputVector;
+    }
+
+    public INDArray getCliqueOutputSTM(String word, Double thresholdSTM) {
+        INDArray inputWordVector = inputLayer.getWordVector(word);
+        INDArray inputVector, outputVector = null;
+        int idPattern = ((RPInputWordSynLayer) inputLayer).getIndexFromWord(word);
+        HashMap<String, INDArray> wordSynonymsVectors = ((RPInputWordSynLayer) inputLayer).getVectorSyns(word);
+        if(wordSynonymsVectors==null)
+            return getCliqueOutput(word);
+        wordSynonymsVectors.put(word, inputWordVector);
+        int numLayers = 0;
+        // Verificar para numero de layers != 1 e existem outras layers que nao sao differential
+        for (RPDenseLayer l : layers) {
+            RPDifferentialLayer diffLayer = (RPDifferentialLayer) l;
+            for (String s : wordSynonymsVectors.keySet()) {
+                if (numLayers == 0) {
+                    inputVector = l.getActivationsMult(wordSynonymsVectors.get(s));
+                } else {
+                    // verificar essa atribuicao
+                    inputVector = null;
+                }
+                diffLayer.memorizeSampleLocalWTA(inputVector, idPattern);
+            }
+            outputVector = diffLayer.getVectorShortTermMemory(idPattern, thresholdSTM);
+            numLayers++;
+        }
+        return outputVector;
     }
 
     public void addLayer(RPDenseLayer layer) {

@@ -5,6 +5,7 @@
  */
 package RandomProjectionNetwork;
 
+import java.util.ArrayList;
 import org.deeplearning4j.nn.weights.WeightInitUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -24,17 +25,25 @@ public class RPDenseLayer extends RPLayer {
         this.numClusters = numClusters;
         this.fanalsPerCluster = fanalsPerCluster;
         this.inputDimension = inputDimension;
-        this.W= this.createRandomMatrixInitialization(min, max);
+        this.W = this.createRandomMatrixInitialization(min, max);
     }
 
     public INDArray getVectorFromCliques(int[] cliqueIndexes) {
         INDArray v = Nd4j.zeros(fanalsPerCluster * numClusters);
-        for(int iCluster=0; iCluster<numClusters; iCluster++){
+        for (int iCluster = 0; iCluster < numClusters; iCluster++) {
             v.putScalar(iCluster * fanalsPerCluster + cliqueIndexes[iCluster], 1.0);
         }
         return v;
     }
-    
+
+    public INDArray getVectorFromIndexes(ArrayList<Integer> indexes) {
+        INDArray v = Nd4j.zeros(fanalsPerCluster * numClusters);
+        for (int id : indexes) {
+            v.putScalar(id, 1.0);
+        }
+        return v;
+    }
+
     public INDArray getActivationsMult(INDArray inputVec) {
         return inputVec.mmul(this.W);
     }

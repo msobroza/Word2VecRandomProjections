@@ -21,10 +21,10 @@ import org.nd4j.linalg.api.ndarray.INDArray;
  */
 public class RPInputWordLayer extends RPLayer {
 
-    private final int wordEmbeddingsDimension;
-    private final HashMap<String, Integer> vectorWordIndexMap;
-    private final int numWords;
-    private final WordVectors wordVecDB;
+    protected final int wordEmbeddingsDimension;
+    protected final HashMap<String, Integer> vectorWordIndexMap;
+    protected final int numWords;
+    protected final WordVectors wordVecDB;
 
     public RPInputWordLayer(String fileName, int wordEmbeddingsDimension) throws FileNotFoundException, UnsupportedEncodingException {
         this.wordEmbeddingsDimension = wordEmbeddingsDimension;

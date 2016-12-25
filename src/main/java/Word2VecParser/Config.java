@@ -10,6 +10,20 @@ package Word2VecParser;
  * @author msobroza
  */
 public class Config {
+    
+    public enum SynonymFile {
+        
+        IndexWord(0),Word(1),FistSynonym(2);
+        private final int index;
+        SynonymFile(int index){
+            this.index=index;
+        }
+        
+        public int getIndex(){
+            return this.index;
+        }
+        
+    }
 
     public enum SimilarityFunction {
 
