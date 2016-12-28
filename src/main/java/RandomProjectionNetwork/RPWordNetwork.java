@@ -19,15 +19,18 @@ public class RPWordNetwork {
 
     private RPInputWordLayer inputLayer;
     private ArrayList<RPDenseLayer> layers;
+    private int numberOriginalVectors;
 
     public RPWordNetwork(String fileInput, int embeddingsDimension) throws FileNotFoundException, UnsupportedEncodingException {
         this.inputLayer = new RPInputWordLayer(fileInput, embeddingsDimension);
         this.layers = new ArrayList<>();
+        this.numberOriginalVectors=0;
     }
 
     public RPWordNetwork(String fileNameEmbedding, String fileNameSyn, int wordEmbeddingsDimension, int minimumSamplesPerPattern) throws FileNotFoundException, UnsupportedEncodingException {
         this.inputLayer = new RPInputWordSynLayer(fileNameEmbedding, fileNameSyn, wordEmbeddingsDimension, minimumSamplesPerPattern);
         this.layers = new ArrayList<>();
+        this.numberOriginalVectors=0;
     }
 
     public INDArray getCliqueOutput(String word) {
@@ -44,14 +47,20 @@ public class RPWordNetwork {
         }
         return inputVector;
     }
+    
+    public int getNumberOriginalVectors(){
+        return this.numberOriginalVectors;
+    }
 
     public INDArray getCliqueOutputSTM(String word, Double thresholdSTM) {
         INDArray inputWordVector = inputLayer.getWordVector(word);
         INDArray inputVector, outputVector = null;
         int idPattern = ((RPInputWordSynLayer) inputLayer).getIndexFromWord(word);
         HashMap<String, INDArray> wordSynonymsVectors = ((RPInputWordSynLayer) inputLayer).getVectorSyns(word);
-        if(wordSynonymsVectors==null)
+        if(wordSynonymsVectors==null){
+            this.numberOriginalVectors++;
             return getCliqueOutput(word);
+        }   
         wordSynonymsVectors.put(word, inputWordVector);
         int numLayers = 0;
         // Verificar para numero de layers != 1 e existem outras layers que nao sao differential

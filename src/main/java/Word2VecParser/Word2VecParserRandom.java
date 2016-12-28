@@ -27,16 +27,16 @@ import org.slf4j.LoggerFactory;
 public class Word2VecParserRandom {
 
     public static final Logger log = LoggerFactory.getLogger(Word2VecParserRandom.class);
-    public static int FANALS_PER_CLUSTER = 128;
-    public static int NUM_CLUSTERS = 32;
+    public static int FANALS_PER_CLUSTER = 2;
+    public static int NUM_CLUSTERS = 2048;
     public static final int EMBEDDINGS_DIMENSIONS = 300;
     public static final String INPUT_EMBEDDINGS = "./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
-    public static final String OUTPUT_FILE = "./code1_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
-    public static final String INPUT_SYNONYM = "./Synonyms/";
-    public static final boolean STM_ENABLE = false;
-    public static final int NUMBER_SAMPLES_PER_PATTERN = 5;
+    public static final String OUTPUT_FILE = "./code2_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String INPUT_SYNONYM = "./Synonyms/syn-glove.6B.300d.txt";
+    public static final boolean STM_ENABLE = true;
+    public static final int NUMBER_SAMPLES_PER_PATTERN = 3;
     public static final Double THRESHOLD_STM = 0.1;
-    public static final boolean DIFFERENTIAL_LAYER = false;
+    public static final boolean DIFFERENTIAL_LAYER = true;
 
     public static void main(String[] args) throws IOException, Exception {
         Word2VecParserRandom.log.info("Random weights matrix Claude idea");
@@ -66,6 +66,9 @@ public class Word2VecParserRandom {
                 Word2VecParserRandom.log.info("j= " + j);
             }
             j++;
+        }
+        if(DIFFERENTIAL_LAYER && STM_ENABLE){
+            System.out.println("Original vectors: "+net.getNumberOriginalVectors());
         }
         writeWordVectors(vectorsBinary, OUTPUT_FILE);
     }

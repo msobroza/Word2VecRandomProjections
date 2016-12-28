@@ -35,7 +35,7 @@ public class SynonymDict {
         int id = this.wordsList.indexOf(word);
         if (id != -1) {
             return getSynonyms(id);
-        }else{
+        } else {
             return null;
         }
     }
@@ -51,7 +51,8 @@ public class SynonymDict {
                 int idWord = Integer.parseInt(l[Config.SynonymFile.IndexWord.getIndex()]);
                 String word = l[Config.SynonymFile.Word.getIndex()];
                 for (int i = Config.SynonymFile.FistSynonym.getIndex(); i < l.length; i++) {
-                    addSynonym(word, idWord, l[i]);
+                    //System.out.println(word+" : "+idWord+" : "+ l[i]);
+                    addSynonym(word, l[i]);
                 }
             }
 

@@ -32,10 +32,15 @@ public class RPInputWordSynLayer extends RPInputWordLayer {
         HashMap<String, INDArray> result = new HashMap<>();
         // Verify the minimum number of samples
         HashSet<String> wordSynonyms = syn.getSynonyms(word);
+        if (wordSynonyms == null) {
+            return null;
+        }
         // Exclude the word it self from results
         wordSynonyms.remove(word);
         // Exclude words that it does not exists a representation in word embeddings
-        for (String s : wordSynonyms) {
+        HashSet<String> wordSynonymsCopy;
+        wordSynonymsCopy = (HashSet<String>) wordSynonyms.clone();
+        for (String s : wordSynonymsCopy) {
             if (!this.vectorWordIndexMap.containsKey(s)) {
                 wordSynonyms.remove(s);
             }
