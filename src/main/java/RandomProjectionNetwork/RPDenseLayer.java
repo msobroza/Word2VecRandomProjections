@@ -48,11 +48,14 @@ public class RPDenseLayer extends RPLayer {
         return inputVec.mmul(this.W);
     }
 
-    public int[] getCliqueIndexesWTA(INDArray activations) {
-        int result[] = new int[numClusters];
-        INDArray indexWinners;
+    protected INDArray getArgMaxIndexes(INDArray activations) {
         INDArray clusterActivations = activations.reshape(1, numClusters, fanalsPerCluster);
-        indexWinners = Nd4j.argMax(clusterActivations, 2);
+        return Nd4j.argMax(clusterActivations, 2);
+    }
+
+    public int[] getCliqueLocalWTA(INDArray activations) {
+        int result[] = new int[numClusters];
+        INDArray indexWinners = getArgMaxIndexes(activations);
         for (int iCluster = 0; iCluster < numClusters; iCluster++) {
             result[iCluster] = indexWinners.getInt(iCluster);
         }

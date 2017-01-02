@@ -5,6 +5,10 @@
  */
 package RandomProjectionNetwork;
 
+import RandomProjectionNetwork.InputLayer.RPInputWordSynLayer;
+import RandomProjectionNetwork.InputLayer.RPInputWordLayer;
+import RandomProjectionNetwork.DifferentialLayer.RPDifferentialHardLayer;
+import RandomProjectionNetwork.DifferentialLayer.RPDifferentialSoftLayer;
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -38,10 +42,10 @@ public class RPWordNetwork {
         int numLayers = 0;
         for (RPDenseLayer l : layers) {
             inputVector = l.getActivationsMult(inputVector);
-            if (numLayers == 0 && l instanceof RPDifferentialLayer) {
-                inputVector = ((RPDifferentialLayer) l).getVectorDifferentialWTA(inputVector);
+            if (numLayers == 0 && l instanceof RPDifferentialHardLayer) {
+                inputVector = ((RPDifferentialHardLayer) l).getVectorLWTA(inputVector);
             } else {
-                inputVector = l.getVectorFromCliques(l.getCliqueIndexesWTA(inputVector));
+                inputVector = l.getVectorFromCliques(l.getCliqueLocalWTA(inputVector));
             }
             numLayers++;
         }
@@ -51,8 +55,8 @@ public class RPWordNetwork {
     public int getNumberOriginalVectors(){
         return this.numberOriginalVectors;
     }
-
-    public INDArray getCliqueOutputSTM(String word, Double thresholdSTM) {
+    
+    public INDArray getCliqueOutputSoftSTM(String word, Double thresholdSTM) {
         INDArray inputWordVector = inputLayer.getWordVector(word);
         INDArray inputVector, outputVector = null;
         int idPattern = ((RPInputWordSynLayer) inputLayer).getIndexFromWord(word);
@@ -65,7 +69,36 @@ public class RPWordNetwork {
         int numLayers = 0;
         // Verificar para numero de layers != 1 e existem outras layers que nao sao differential
         for (RPDenseLayer l : layers) {
-            RPDifferentialLayer diffLayer = (RPDifferentialLayer) l;
+            RPDifferentialSoftLayer diffLayer = (RPDifferentialSoftLayer) l;
+            for (String s : wordSynonymsVectors.keySet()) {
+                if (numLayers == 0) {
+                    inputVector = l.getActivationsMult(wordSynonymsVectors.get(s));
+                } else {
+                    // verificar essa atribuicao
+                    inputVector = null;
+                }
+                diffLayer.memorizeSampleSoft(inputVector, idPattern);
+            }
+            outputVector = diffLayer.getBinaryVectorLowestClustersSTM(getCliqueOutput(word), idPattern, thresholdSTM);
+            numLayers++;
+        }
+        return outputVector;
+    }
+
+    public INDArray getCliqueOutputHardSTM(String word, Double thresholdSTM) {
+        INDArray inputWordVector = inputLayer.getWordVector(word);
+        INDArray inputVector, outputVector = null;
+        int idPattern = ((RPInputWordSynLayer) inputLayer).getIndexFromWord(word);
+        HashMap<String, INDArray> wordSynonymsVectors = ((RPInputWordSynLayer) inputLayer).getVectorSyns(word);
+        if(wordSynonymsVectors==null){
+            this.numberOriginalVectors++;
+            return getCliqueOutput(word);
+        }   
+        wordSynonymsVectors.put(word, inputWordVector);
+        int numLayers = 0;
+        // Verificar para numero de layers != 1 e existem outras layers que nao sao differential
+        for (RPDenseLayer l : layers) {
+            RPDifferentialHardLayer diffLayer = (RPDifferentialHardLayer) l;
             for (String s : wordSynonymsVectors.keySet()) {
                 if (numLayers == 0) {
                     inputVector = l.getActivationsMult(wordSynonymsVectors.get(s));
@@ -75,7 +108,7 @@ public class RPWordNetwork {
                 }
                 diffLayer.memorizeSampleLocalWTA(inputVector, idPattern);
             }
-            outputVector = diffLayer.getVectorShortTermMemory(idPattern, thresholdSTM);
+            outputVector = diffLayer.getBinaryVectorSTM(idPattern, thresholdSTM);
             numLayers++;
         }
         return outputVector;

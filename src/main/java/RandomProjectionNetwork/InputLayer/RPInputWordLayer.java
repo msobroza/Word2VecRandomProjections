@@ -3,9 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package RandomProjectionNetwork;
+package RandomProjectionNetwork.InputLayer;
 
 
+import RandomProjectionNetwork.RPLayer;
 import Word2VecParser.Word2VecParserRandom;
 import java.io.File;
 import java.io.FileNotFoundException;

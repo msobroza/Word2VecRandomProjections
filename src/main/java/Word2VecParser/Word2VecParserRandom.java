@@ -7,8 +7,9 @@ package Word2VecParser;
 
 import Model.Embedding.EmbeddingDouble;
 import RandomProjectionNetwork.RPDenseLayer;
-import RandomProjectionNetwork.RPDifferentialLayer;
-import RandomProjectionNetwork.RPInputWordLayer;
+import RandomProjectionNetwork.DifferentialLayer.RPDifferentialHardLayer;
+import RandomProjectionNetwork.DifferentialLayer.RPDifferentialSoftLayer;
+import RandomProjectionNetwork.InputLayer.RPInputWordLayer;
 import RandomProjectionNetwork.RPWordNetwork;
 import Tools.SynonymDict;
 import java.io.BufferedWriter;
@@ -31,34 +32,42 @@ public class Word2VecParserRandom {
     public static int NUM_CLUSTERS = 2048;
     public static final int EMBEDDINGS_DIMENSIONS = 300;
     public static final String INPUT_EMBEDDINGS = "./gloveVectors/glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
-    public static final String OUTPUT_FILE = "./code2_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
+    public static final String OUTPUT_FILE = "./code5_binary_glove.6B." + EMBEDDINGS_DIMENSIONS + "d.txt";
     public static final String INPUT_SYNONYM = "./Synonyms/syn-glove.6B.300d.txt";
-    public static final boolean STM_ENABLE = true;
+    public static final boolean STM_ENABLED = true;
     public static final int NUMBER_SAMPLES_PER_PATTERN = 3;
     public static final Double THRESHOLD_STM = 0.1;
     public static final boolean DIFFERENTIAL_LAYER = true;
+    public static final boolean SOFT_DECISION_ENABLED = true;
 
     public static void main(String[] args) throws IOException, Exception {
         Word2VecParserRandom.log.info("Random weights matrix Claude idea");
         RPWordNetwork net;
-        if (STM_ENABLE) {
+        if (STM_ENABLED) {
             net = new RPWordNetwork(INPUT_EMBEDDINGS, INPUT_SYNONYM, EMBEDDINGS_DIMENSIONS, NUMBER_SAMPLES_PER_PATTERN);
         } else {
             net = new RPWordNetwork(INPUT_EMBEDDINGS, EMBEDDINGS_DIMENSIONS);
         }
         if (DIFFERENTIAL_LAYER) {
-            net.addLayer(new RPDifferentialLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, net.getInputLayer().getNumberWords(), (float) -1.0, (float) 1.0));
+            if (SOFT_DECISION_ENABLED) {
+                net.addLayer(new RPDifferentialSoftLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, net.getInputLayer().getNumberWords(), (float) -1.0, (float) 1.0));
+            } else {
+                net.addLayer(new RPDifferentialHardLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, net.getInputLayer().getNumberWords(), (float) -1.0, (float) 1.0));
+            }
         } else {
             net.addLayer(new RPDenseLayer(EMBEDDINGS_DIMENSIONS, NUM_CLUSTERS, FANALS_PER_CLUSTER, (float) -1.0, (float) 1.0));
         }
-
         int j = 0;
         RPInputWordLayer inputLayer = net.getInputLayer();
         ArrayList<EmbeddingDouble> vectorsBinary = new ArrayList<>();
         for (int i = 0; i < inputLayer.getNumberWords(); i++) {
             String word = inputLayer.getWord(i);
-            if (DIFFERENTIAL_LAYER && STM_ENABLE) {
-                vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutputSTM(word, THRESHOLD_STM)));
+            if (DIFFERENTIAL_LAYER && STM_ENABLED) {
+                if (SOFT_DECISION_ENABLED) {
+                    vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutputSoftSTM(word, THRESHOLD_STM)));
+                } else {
+                    vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutputHardSTM(word, THRESHOLD_STM)));
+                }
             } else {
                 vectorsBinary.add(new EmbeddingDouble(word, net.getCliqueOutput(word)));
             }
@@ -67,8 +76,8 @@ public class Word2VecParserRandom {
             }
             j++;
         }
-        if(DIFFERENTIAL_LAYER && STM_ENABLE){
-            System.out.println("Original vectors: "+net.getNumberOriginalVectors());
+        if (DIFFERENTIAL_LAYER && STM_ENABLED) {
+            System.out.println("Original vectors: " + net.getNumberOriginalVectors());
         }
         writeWordVectors(vectorsBinary, OUTPUT_FILE);
     }
